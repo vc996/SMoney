@@ -23,14 +23,13 @@ class TransactionService {
             type,
             amount,
             note,
-            createdAt: new Date().toISOString(),
         });
     }
 
     async getByLoan(loanId, { limit = 50, offset = 0 } = {}) {
         return await databases.listDocuments(DB(), COL, [
             Query.equal("loanId", String(loanId)),
-            Query.orderDesc("createdAt"),
+            Query.orderDesc("$createdAt"),
             Query.limit(limit),
             Query.offset(offset),
         ]);
@@ -39,7 +38,7 @@ class TransactionService {
     async getByUser(userId, { limit = 50, offset = 0 } = {}) {
         return await databases.listDocuments(DB(), COL, [
             Query.equal("userId", String(userId)),
-            Query.orderDesc("createdAt"),
+            Query.orderDesc("$createdAt"),
             Query.limit(limit),
             Query.offset(offset),
         ]);
@@ -54,7 +53,7 @@ class TransactionService {
             label: TX_LABELS[tx.type] || tx.type,
             amount: tx.amount,
             note: tx.note,
-            createdAt: tx.createdAt,
+            createdAt: tx.$createdAt,
         };
     }
 }

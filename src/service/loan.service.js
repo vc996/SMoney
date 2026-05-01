@@ -27,7 +27,6 @@ class LoanService {
             note: note || null,
             dueDate: calcDueDate(now, termMonths),
             nextPaymentDate: calcNextPaymentDate(now, 0),
-            createdAt: now,
         });
     }
 
@@ -43,7 +42,7 @@ class LoanService {
             status: isCompleted ? "COMPLETED" : "ACTIVE",
         };
         if (!isCompleted) {
-            updates.nextPaymentDate = calcNextPaymentDate(loan.createdAt, newInstallments);
+            updates.nextPaymentDate = calcNextPaymentDate(loan.$createdAt, newInstallments);
         }
 
         return await databases.updateDocument(DB(), COL, loanId, updates);
@@ -60,7 +59,7 @@ class LoanService {
     async getByBorrower(borrowerId, { status, limit = 20, offset = 0 } = {}) {
         const q = [
             Query.equal("borrowerId", String(borrowerId)),
-            Query.orderDesc("createdAt"),
+            Query.orderDesc("$createdAt"),
             Query.limit(limit),
             Query.offset(offset),
         ];
@@ -92,7 +91,7 @@ class LoanService {
             note: loan.note,
             dueDate: loan.dueDate,
             nextPaymentDate: loan.nextPaymentDate,
-            createdAt: loan.createdAt,
+            createdAt: loan.$createdAt,
         };
     }
 }
