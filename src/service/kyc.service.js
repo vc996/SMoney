@@ -31,10 +31,22 @@ class KycService {
     }
 
     async review(userId, { approved, rejectionReason = null }) {
-        const data = { status: approved ? "approved" : "rejected" };
-        if (!approved && rejectionReason) data.rejectionReason = rejectionReason;
-        // reviewedAt tự cập nhật qua $updatedAt của Appwrite
-        return await databases.updateDocument(DB(), COL, String(userId), data);
+        const id = String(userId);
+        const newStatus = approved ? "approved" : "rejected";
+
+        // Bước 1: cập nhật status trước (không gửi rejectionReason để tránh lỗi schema)
+        const doc = await databases.updateDocument(DB(), COL, id, { status: newStatus });
+
+        // Bước 2: nếu từ chối và có lý do → thử cập nhật riêng, lỗi schema thì bỏ qua
+        if (!approved && rejectionReason) {
+            try {
+                return await databases.updateDocument(DB(), COL, id, { rejectionReason });
+            } catch {
+                // attribute chưa có trong schema → status đã lưu rồi, không throw
+            }
+        }
+
+        return doc;
     }
 
     format(kyc) {
