@@ -14,29 +14,76 @@ const configSvc = new ConfigService();
 async function createLoanHandler({ payload, res, log, error }) {
     const { userId, amount, currency = "VND", termMonths, note } = payload;
 
-    // Load dynamic config for validation limits
     const config = await configSvc.get().catch(() => null);
     const errors = validateCreateLoan({ amount, currency, termMonths }, config ?? {});
     if (errors.length) return res.json({ success: false, message: errors[0] }, 400);
 
     try {
+        // Tạo đơn PENDING — chưa giải ngân, chưa tính stats
         const loan = await loanSvc.create({ borrowerId: userId, amount, currency, termMonths, note });
 
-        await txSvc.record({
-            loanId: loan.$id,
-            userId,
-            type: TX_TYPES.DISBURSEMENT,
-            amount,
-            note: `Giải ngân khoản vay ${termMonths} tháng`,
+        log(`Loan PENDING: ${loan.$id} by ${userId}`);
+        return res.json({
+            success: true,
+            message: "Đơn vay đã được gửi, chờ admin xét duyệt",
+            loan: loanSvc.format(loan),
         });
-
-        await userSvc.incrementStats(userId, { borrowed: amount, activeLoans: 1 });
-
-        log(`Loan created: ${loan.$id} by ${userId}`);
-        return res.json({ success: true, message: "Tạo khoản vay thành công", loan: loanSvc.format(loan) });
     } catch (err) {
         error("createLoan: " + err.message);
         return res.json({ success: false, message: "Không thể tạo khoản vay" }, 500);
+    }
+}
+
+// POST action: approve_loan  (admin)
+async function approveLoanHandler({ payload, res, log, error }) {
+    const { adminKey, loanId } = payload;
+
+    if (adminKey !== process.env.ADMIN_KEY)
+        return res.json({ success: false, message: "Không có quyền admin" }, 403);
+    if (!loanId)
+        return res.json({ success: false, message: "Thiếu loanId" }, 400);
+
+    try {
+        const approved = await loanSvc.approve(loanId);
+        const borrowerId = approved.borrowerId;
+
+        // Ghi giao dịch giải ngân
+        await txSvc.record({
+            loanId,
+            userId: borrowerId,
+            type: TX_TYPES.DISBURSEMENT,
+            amount: approved.amount,
+            note: `Giải ngân khoản vay ${approved.termMonths} tháng`,
+        });
+
+        // Cập nhật thống kê người dùng
+        await userSvc.incrementStats(borrowerId, { borrowed: approved.amount, activeLoans: 1 });
+
+        log(`Loan APPROVED: ${loanId}`);
+        return res.json({ success: true, message: "Duyệt khoản vay thành công", loan: loanSvc.format(approved) });
+    } catch (err) {
+        error("approveLoan: " + err.message);
+        return res.json({ success: false, message: err.message || "Lỗi server" }, 500);
+    }
+}
+
+// POST action: reject_loan  (admin)
+async function rejectLoanHandler({ payload, res, log, error }) {
+    const { adminKey, loanId, reason } = payload;
+
+    if (adminKey !== process.env.ADMIN_KEY)
+        return res.json({ success: false, message: "Không có quyền admin" }, 403);
+    if (!loanId)
+        return res.json({ success: false, message: "Thiếu loanId" }, 400);
+
+    try {
+        const rejected = await loanSvc.reject(loanId, reason);
+
+        log(`Loan REJECTED: ${loanId} — ${reason || "no reason"}`);
+        return res.json({ success: true, message: "Từ chối khoản vay thành công", loan: loanSvc.format(rejected) });
+    } catch (err) {
+        error("rejectLoan: " + err.message);
+        return res.json({ success: false, message: err.message || "Lỗi server" }, 500);
     }
 }
 
@@ -179,4 +226,4 @@ async function updateLoanStatusHandler({ payload, res, log, error }) {
     }
 }
 
-module.exports = { createLoanHandler, repayHandler, getLoanHandler, getLoansHandler, getTransactionsHandler, updateLoanStatusHandler };
+module.exports = { createLoanHandler, approveLoanHandler, rejectLoanHandler, repayHandler, getLoanHandler, getLoansHandler, getTransactionsHandler, updateLoanStatusHandler };

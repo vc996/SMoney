@@ -1,6 +1,6 @@
 const { authHandler } = require("./handlers/auth");
 const { getDashboardHandler } = require("./handlers/dashboard");
-const { createLoanHandler, repayHandler, getLoanHandler, getLoansHandler, getTransactionsHandler, updateLoanStatusHandler } = require("./handlers/loan");
+const { createLoanHandler, approveLoanHandler, rejectLoanHandler, repayHandler, getLoanHandler, getLoansHandler, getTransactionsHandler, updateLoanStatusHandler } = require("./handlers/loan");
 const { submitKycHandler, getKycStatusHandler, reviewKycHandler } = require("./handlers/kyc");
 const { getConfigHandler, updateConfigHandler } = require("./handlers/config");
 const { authMiddleware } = require("./middleware/auth.middleware");
@@ -39,6 +39,8 @@ async function router(context) {
         case "get_kyc_status":     return await getKycStatusHandler(context);
         case "review_kyc":         return await reviewKycHandler(context);
         case "update_loan_status": return await updateLoanStatusHandler(context);
+        case "approve_loan":       return await approveLoanHandler(context);
+        case "reject_loan":        return await rejectLoanHandler(context);
         case "get_config":         return await getConfigHandler(context);
         case "update_config":      return await updateConfigHandler(context);
         default:

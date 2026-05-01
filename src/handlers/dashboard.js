@@ -23,20 +23,26 @@ async function getDashboardHandler({ payload, res, error }) {
         const loans = loansResult.documents.map(l => loanSvc.format(l));
         const recentTransactions = recentTxResult.documents.map(t => txSvc.format(t));
 
-        const activeLoans = loans.filter(l => ["ACTIVE", "OVERDUE"].includes(l.status));
-        const activeOne = activeLoans[0] ?? null;
+        // Ưu tiên: OVERDUE > ACTIVE > PENDING (mới nhất)
+        const priority = ["OVERDUE", "ACTIVE", "PENDING"];
+        let widgetLoan = null;
+        for (const s of priority) {
+            widgetLoan = loans.find(l => l.status === s) ?? null;
+            if (widgetLoan) break;
+        }
 
-        const loanWidget = activeOne ? {
-            loanId: activeOne.id,
-            amount: activeOne.amount,
-            currency: activeOne.currency,
-            progressPercent: activeOne.progressPercent,
-            paidAmount: activeOne.paidAmount,
-            remainingAmount: activeOne.remainingAmount,
-            monthlyPayment: activeOne.monthlyPayment,
-            nextPaymentDate: activeOne.nextPaymentDate,
-            installmentsLeft: activeOne.installmentsLeft,
-            status: activeOne.status,
+        const loanWidget = widgetLoan ? {
+            loanId:          widgetLoan.id,
+            amount:          widgetLoan.amount,
+            currency:        widgetLoan.currency,
+            progressPercent: widgetLoan.progressPercent,
+            paidAmount:      widgetLoan.paidAmount,
+            remainingAmount: widgetLoan.remainingAmount,
+            monthlyPayment:  widgetLoan.monthlyPayment,
+            nextPaymentDate: widgetLoan.nextPaymentDate,
+            installmentsLeft: widgetLoan.installmentsLeft,
+            status:          widgetLoan.status,
+            rejectionReason: widgetLoan.rejectionReason ?? null,
         } : null;
 
         return res.json({
