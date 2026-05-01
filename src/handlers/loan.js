@@ -18,9 +18,13 @@ async function createLoanHandler({ payload, res, log, error }) {
     const errors = validateCreateLoan({ amount, currency, termMonths }, config ?? {});
     if (errors.length) return res.json({ success: false, message: errors[0] }, 400);
 
+    // Lấy lãi suất từ config theo kỳ hạn — không hardcode trong service
+    const termCfg      = (config?.terms ?? []).find(t => t.months === termMonths);
+    const interestRate = termCfg?.rate ?? null;   // null → service fallback 15%
+
     try {
         // Tạo đơn PENDING — chưa giải ngân, chưa tính stats
-        const loan = await loanSvc.create({ borrowerId: userId, amount, currency, termMonths, note });
+        const loan = await loanSvc.create({ borrowerId: userId, amount, currency, termMonths, interestRate, note });
 
         log(`Loan PENDING: ${loan.$id} by ${userId}`);
         return res.json({

@@ -4,12 +4,10 @@ const { calcMonthlyPayment, calcTotalRepayable, calcDueDate, calcNextPaymentDate
 const DB  = () => process.env.APPWRITE_DATABASE_ID;
 const COL = "loans";
 
-const RATE_BY_TERM = { 3: 18, 6: 15, 12: 12 };
-
 class LoanService {
     /** Tạo đơn vay mới — bắt đầu ở trạng thái PENDING, chờ admin duyệt */
-    async create({ borrowerId, amount, currency, termMonths, note }) {
-        const annualRate     = RATE_BY_TERM[termMonths] ?? 15;
+    async create({ borrowerId, amount, currency, termMonths, interestRate, note }) {
+        const annualRate     = interestRate ?? 15;
         const monthlyPayment = calcMonthlyPayment(amount, annualRate, termMonths);
         const totalRepayable = calcTotalRepayable(monthlyPayment, termMonths);
 

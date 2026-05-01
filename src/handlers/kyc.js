@@ -2,8 +2,8 @@ const { KycService } = require("../service/kyc.service");
 const { UserService } = require("../service/user.service");
 const { validateKYC } = require("../utils/validators");
 
-const kycSvc = new KycService();
-const userSvc = new UserService();
+const kycSvc  = new KycService();
+const userSvc = new UserService();   // dùng cho updateCreditScore khi approve
 
 // POST action: submit_kyc
 async function submitKycHandler({ payload, res, log, error }) {
@@ -13,8 +13,8 @@ async function submitKycHandler({ payload, res, log, error }) {
     if (errors.length) return res.json({ success: false, message: errors[0] }, 400);
 
     try {
+        // submit() tự sync kycStatus → users table
         const kyc = await kycSvc.submit({ userId, fullName, cccdNumber, phoneNumber });
-        await userSvc.updateKycStatus(userId, "pending");
 
         log(`KYC submitted: ${userId}`);
         return res.json({
@@ -41,10 +41,10 @@ async function getKycStatusHandler({ payload, res, error }) {
             rejected: `Hồ sơ bị từ chối: ${kyc?.rejectionReason || "Thông tin không hợp lệ"}`,
         };
         return res.json({
-            success: true,
+            success:   true,
             kycStatus: kyc?.status || "none",
-            message: messages[kyc?.status] || "Chưa nộp hồ sơ KYC",
-            kyc: kycSvc.format(kyc),
+            message:   messages[kyc?.status] || "Chưa nộp hồ sơ KYC",
+            kyc:       kycSvc.format(kyc),
         });
     } catch (err) {
         error("getKycStatus: " + err.message);
@@ -60,8 +60,10 @@ async function reviewKycHandler({ payload, res, log, error }) {
         return res.json({ success: false, message: "Không có quyền admin" }, 403);
 
     try {
+        // review() tự sync kycStatus → users table
         await kycSvc.review(targetUserId, { approved, rejectionReason });
-        await userSvc.updateKycStatus(targetUserId, approved ? "approved" : "rejected");
+
+        // Cộng điểm tín dụng khi KYC được duyệt
         if (approved) await userSvc.updateCreditScore(targetUserId, +100);
 
         log(`KYC ${approved ? "approved" : "rejected"}: ${targetUserId}`);
