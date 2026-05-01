@@ -1,21 +1,21 @@
-const { authHandler } = require("./handlers/auth");
-const { getDashboardHandler } = require("./handlers/dashboard");
-const { createLoanHandler, approveLoanHandler, rejectLoanHandler, repayHandler, getLoanHandler, getLoansHandler, getTransactionsHandler, updateLoanStatusHandler } = require("./handlers/loan");
-const { submitKycHandler, getKycStatusHandler, reviewKycHandler } = require("./handlers/kyc");
+const { authHandler }           = require("./handlers/auth");
+const { getDashboardHandler }   = require("./handlers/dashboard");
 const { getConfigHandler, updateConfigHandler } = require("./handlers/config");
+const { getTiersHandler } = require("./handlers/tier");
+const {
+    createLoanHandler, approveLoanHandler, rejectLoanHandler,
+    repayHandler, getLoanHandler, getLoansHandler,
+    getTransactionsHandler, updateLoanStatusHandler,
+} = require("./handlers/loan");
+const { submitKycHandler, getKycStatusHandler, reviewKycHandler } = require("./handlers/kyc");
 const { authMiddleware } = require("./middleware/auth.middleware");
 
+// Actions yêu cầu JWT
 const PROTECTED = new Set([
     "get_dashboard",
-    "create_loan",
-    "repay",
-    "get_loan",
-    "get_loans",
-    "get_transactions",
-    "submit_kyc",
-    "get_kyc_status",
-    "review_kyc",
-    "update_loan_status",
+    "create_loan", "repay", "get_loan", "get_loans", "get_transactions",
+    "submit_kyc", "get_kyc_status",
+    // Admin actions dùng adminKey riêng, không cần JWT
 ]);
 
 async function router(context) {
@@ -28,21 +28,34 @@ async function router(context) {
     }
 
     switch (action) {
-        case "auth":               return await authHandler(context);
-        case "get_dashboard":      return await getDashboardHandler(context);
-        case "create_loan":        return await createLoanHandler(context);
-        case "repay":              return await repayHandler(context);
-        case "get_loan":           return await getLoanHandler(context);
-        case "get_loans":          return await getLoansHandler(context);
-        case "get_transactions":   return await getTransactionsHandler(context);
-        case "submit_kyc":         return await submitKycHandler(context);
-        case "get_kyc_status":     return await getKycStatusHandler(context);
-        case "review_kyc":         return await reviewKycHandler(context);
-        case "update_loan_status": return await updateLoanStatusHandler(context);
-        case "approve_loan":       return await approveLoanHandler(context);
-        case "reject_loan":        return await rejectLoanHandler(context);
-        case "get_config":         return await getConfigHandler(context);
-        case "update_config":      return await updateConfigHandler(context);
+        // ── Auth ──────────────────────────────────────────
+        case "auth":               return authHandler(context);
+
+        // ── Dashboard ─────────────────────────────────────
+        case "get_dashboard":      return getDashboardHandler(context);
+
+        // ── Config ────────────────────────────────────────
+        case "get_config":         return getConfigHandler(context);
+        case "update_config":      return updateConfigHandler(context);
+
+        // ── Loan Tiers ────────────────────────────────────
+        case "get_tiers":          return getTiersHandler(context);
+
+        // ── Loans ─────────────────────────────────────────
+        case "create_loan":        return createLoanHandler(context);
+        case "approve_loan":       return approveLoanHandler(context);
+        case "reject_loan":        return rejectLoanHandler(context);
+        case "repay":              return repayHandler(context);
+        case "get_loan":           return getLoanHandler(context);
+        case "get_loans":          return getLoansHandler(context);
+        case "get_transactions":   return getTransactionsHandler(context);
+        case "update_loan_status": return updateLoanStatusHandler(context);
+
+        // ── KYC ───────────────────────────────────────────
+        case "submit_kyc":         return submitKycHandler(context);
+        case "get_kyc_status":     return getKycStatusHandler(context);
+        case "review_kyc":         return reviewKycHandler(context);
+
         default:
             return res.json({ success: false, message: `Action '${action}' không tồn tại` }, 404);
     }

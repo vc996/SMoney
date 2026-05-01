@@ -1,12 +1,12 @@
 const { databases, ID, Query } = require("../config/appwrite.config");
 
-const DB = () => process.env.APPWRITE_DATABASE_ID;
+const DB  = () => process.env.APPWRITE_DATABASE_ID;
 const COL = "transactions";
 
 const TX_TYPES = {
-    DISBURSEMENT: "DISBURSEMENT", // Giải ngân
-    REPAYMENT:    "REPAYMENT",    // Trả nợ
-    PENALTY:      "PENALTY",      // Phí phạt
+    DISBURSEMENT: "DISBURSEMENT",
+    REPAYMENT:    "REPAYMENT",
+    PENALTY:      "PENALTY",
 };
 
 const TX_LABELS = {
@@ -22,7 +22,7 @@ class TransactionService {
             userId: String(userId),
             type,
             amount,
-            note,
+            note:   note || null,
         });
     }
 
@@ -46,13 +46,13 @@ class TransactionService {
 
     format(tx) {
         return {
-            id: tx.$id,
-            loanId: tx.loanId,
-            userId: tx.userId,
-            type: tx.type,
-            label: TX_LABELS[tx.type] || tx.type,
-            amount: tx.amount,
-            note: tx.note,
+            id:        tx.$id,
+            loanId:    tx.loanId,
+            userId:    tx.userId,
+            type:      tx.type,
+            label:     TX_LABELS[tx.type] || tx.type,
+            amount:    tx.amount,
+            note:      tx.note || null,
             createdAt: tx.$createdAt,
         };
     }

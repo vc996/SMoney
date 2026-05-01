@@ -2,43 +2,51 @@ const { LoanService } = require("../service/loan.service");
 const { TransactionService, TX_TYPES } = require("../service/transaction.service");
 const { UserService } = require("../service/user.service");
 const { ConfigService } = require("../service/config.service");
+const { TierService } = require("../service/tier.service");
 const { validateCreateLoan, validateRepay } = require("../utils/validators");
 const { calcLateFee } = require("../utils/interest");
 
-const loanSvc = new LoanService();
-const txSvc = new TransactionService();
-const userSvc = new UserService();
+const loanSvc   = new LoanService();
+const txSvc     = new TransactionService();
+const userSvc   = new UserService();
 const configSvc = new ConfigService();
+const tierSvc   = new TierService();
 
-// POST action: create_loan
+// ─── POST: create_loan ─────────────────────────────────────────────────────
 async function createLoanHandler({ payload, res, log, error }) {
     const { userId, amount, currency = "VND", termMonths, note } = payload;
 
-    const [config, user] = await Promise.all([
+    // Lấy config, tiers và user song song
+    const [config, tiers, user] = await Promise.all([
         configSvc.get().catch(() => null),
+        tierSvc.getAll().catch(() => []),
         userSvc.getOrCreate(userId),
     ]);
 
-    // Kiểm tra KYC trước khi cho vay
+    // KYC phải được duyệt
     if (user.kycStatus !== "approved")
-        return res.json({ success: false, message: "Bạn cần xác minh danh tính (KYC) trước khi tạo khoản vay", requiresKyc: true }, 403);
+        return res.json({
+            success:     false,
+            message:     "Bạn cần xác minh danh tính (KYC) trước khi tạo khoản vay",
+            requiresKyc: true,
+        }, 403);
 
+    // Validate số tiền, kỳ hạn
     const errors = validateCreateLoan({ amount, currency, termMonths }, config ?? {});
     if (errors.length) return res.json({ success: false, message: errors[0] }, 400);
 
-    // Lấy lãi suất từ config theo kỳ hạn — không hardcode trong service
-    const termCfg      = (config?.terms ?? []).find(t => t.months === termMonths);
-    const interestRate = termCfg?.rate ?? null;   // null → service fallback 15%
+    // Lấy lãi suất từ tier (theo mức vay × kỳ hạn), fallback về config term rate
+    const tierRate  = tierSvc.rateFor(tiers, amount, termMonths);
+    const termCfg   = (config?.terms ?? []).find(t => t.months === termMonths);
+    const interestRate = tierRate ?? termCfg?.rate ?? null;
 
     try {
-        // Tạo đơn PENDING — chưa giải ngân, chưa tính stats
         const loan = await loanSvc.create({ borrowerId: userId, amount, currency, termMonths, interestRate, note });
-
         log(`Loan PENDING: ${loan.$id} by ${userId}`);
         return res.json({
             success: true,
             message: "Đơn vay đã được gửi, chờ admin xét duyệt",
-            loan: loanSvc.format(loan),
+            loan:    loanSvc.format(loan),
         });
     } catch (err) {
         error("createLoan: " + err.message);
@@ -46,7 +54,7 @@ async function createLoanHandler({ payload, res, log, error }) {
     }
 }
 
-// POST action: approve_loan  (admin)
+// ─── POST: approve_loan (admin) ────────────────────────────────────────────
 async function approveLoanHandler({ payload, res, log, error }) {
     const { adminKey, loanId } = payload;
 
@@ -56,20 +64,20 @@ async function approveLoanHandler({ payload, res, log, error }) {
         return res.json({ success: false, message: "Thiếu loanId" }, 400);
 
     try {
-        const approved = await loanSvc.approve(loanId);
-        const borrowerId = approved.borrowerId;
+        const approved    = await loanSvc.approve(loanId);
+        const borrowerId  = approved.borrowerId;
 
-        // Ghi giao dịch giải ngân
-        await txSvc.record({
-            loanId,
-            userId: borrowerId,
-            type: TX_TYPES.DISBURSEMENT,
-            amount: approved.amount,
-            note: `Giải ngân khoản vay ${approved.termMonths} tháng`,
-        });
-
-        // Cập nhật thống kê người dùng
-        await userSvc.incrementStats(borrowerId, { borrowed: approved.amount, activeLoans: 1 });
+        // Ghi giao dịch giải ngân + cập nhật thống kê song song
+        await Promise.all([
+            txSvc.record({
+                loanId,
+                userId: borrowerId,
+                type:   TX_TYPES.DISBURSEMENT,
+                amount: approved.amount,
+                note:   `Giải ngân khoản vay ${approved.termMonths} tháng`,
+            }),
+            userSvc.incrementStats(borrowerId, { borrowed: approved.amount, activeLoans: 1 }),
+        ]);
 
         log(`Loan APPROVED: ${loanId}`);
         return res.json({ success: true, message: "Duyệt khoản vay thành công", loan: loanSvc.format(approved) });
@@ -79,7 +87,7 @@ async function approveLoanHandler({ payload, res, log, error }) {
     }
 }
 
-// POST action: reject_loan  (admin)
+// ─── POST: reject_loan (admin) ─────────────────────────────────────────────
 async function rejectLoanHandler({ payload, res, log, error }) {
     const { adminKey, loanId, reason } = payload;
 
@@ -90,7 +98,6 @@ async function rejectLoanHandler({ payload, res, log, error }) {
 
     try {
         const rejected = await loanSvc.reject(loanId, reason);
-
         log(`Loan REJECTED: ${loanId} — ${reason || "no reason"}`);
         return res.json({ success: true, message: "Từ chối khoản vay thành công", loan: loanSvc.format(rejected) });
     } catch (err) {
@@ -99,7 +106,7 @@ async function rejectLoanHandler({ payload, res, log, error }) {
     }
 }
 
-// POST action: repay
+// ─── POST: repay ───────────────────────────────────────────────────────────
 async function repayHandler({ payload, res, log, error }) {
     const { userId, loanId, amount } = payload;
 
@@ -117,42 +124,56 @@ async function repayHandler({ payload, res, log, error }) {
 
         // Tính phí phạt nếu trả trễ
         let lateFee = 0;
-        const now = new Date();
-        const nextDue = new Date(loan.nextPaymentDate);
-        if (now > nextDue) {
+        const now     = new Date();
+        const nextDue = loan.nextPaymentDate ? new Date(loan.nextPaymentDate) : null;
+        if (nextDue && now > nextDue) {
             const daysLate = Math.floor((now - nextDue) / 86_400_000);
             lateFee = calcLateFee(loan.monthlyPayment, daysLate);
         }
 
-        const totalPay = amount + lateFee;
-        const updatedLoan = await loanSvc.repay(loanId, totalPay);
+        const totalPay  = amount + lateFee;
+        const updated   = await loanSvc.repay(loanId, totalPay);
 
-        await txSvc.record({
-            loanId,
-            userId,
-            type: TX_TYPES.REPAYMENT,
-            amount: totalPay,
-            note: lateFee > 0
-                ? `Kỳ ${updatedLoan.installmentsPaid} + phí phạt ${lateFee.toLocaleString()}`
-                : `Kỳ ${updatedLoan.installmentsPaid}`,
-        });
-
+        // Ghi giao dịch (phí phạt ghi riêng nếu có)
+        const txPromises = [
+            txSvc.record({
+                loanId,
+                userId,
+                type:   TX_TYPES.REPAYMENT,
+                amount: totalPay,
+                note:   lateFee > 0
+                    ? `Kỳ ${updated.installmentsPaid} + phí phạt ${lateFee.toLocaleString()}`
+                    : `Kỳ ${updated.installmentsPaid}`,
+            }),
+        ];
         if (lateFee > 0) {
-            await txSvc.record({ loanId, userId, type: TX_TYPES.PENALTY, amount: lateFee, note: "Phí phạt chậm thanh toán" });
+            txPromises.push(txSvc.record({
+                loanId, userId,
+                type:   TX_TYPES.PENALTY,
+                amount: lateFee,
+                note:   "Phí phạt chậm thanh toán",
+            }));
         }
 
-        await userSvc.incrementStats(userId, { repaid: totalPay });
+        // Cập nhật thống kê user + xử lý hoàn thành khoản vay
+        const statsUpdate = userSvc.incrementStats(userId, { repaid: totalPay });
+        const postComplete = updated.status === "COMPLETED"
+            ? Promise.all([
+                statsUpdate,
+                userSvc.incrementStats(userId, { activeLoans: -1 }),
+                userSvc.updateCreditScore(userId, +50),
+              ])
+            : statsUpdate;
 
-        if (updatedLoan.status === "COMPLETED") {
-            await userSvc.incrementStats(userId, { activeLoans: -1 });
-            await userSvc.updateCreditScore(userId, +50);
-        }
+        await Promise.all([...txPromises, postComplete]);
 
-        log(`Repay loan ${loanId}: ${totalPay}`);
+        log(`Repay loan ${loanId}: ${totalPay} (fee: ${lateFee})`);
         return res.json({
             success: true,
-            message: updatedLoan.status === "COMPLETED" ? "Chúc mừng! Đã trả hết khoản vay!" : `Trả kỳ ${updatedLoan.installmentsPaid} thành công`,
-            loan: loanSvc.format(updatedLoan),
+            message: updated.status === "COMPLETED"
+                ? "Chúc mừng! Đã trả hết khoản vay!"
+                : `Trả kỳ ${updated.installmentsPaid} thành công`,
+            loan:    loanSvc.format(updated),
             payment: { amount, lateFee, total: totalPay },
         });
     } catch (err) {
@@ -161,9 +182,10 @@ async function repayHandler({ payload, res, log, error }) {
     }
 }
 
-// GET action: get_loan
+// ─── GET: get_loan ─────────────────────────────────────────────────────────
 async function getLoanHandler({ payload, res, error }) {
     const { userId, loanId } = payload;
+    if (!loanId) return res.json({ success: false, message: "Thiếu loanId" }, 400);
     try {
         const loan = await loanSvc.getById(loanId);
         if (loan.borrowerId !== String(userId))
@@ -176,15 +198,15 @@ async function getLoanHandler({ payload, res, error }) {
     }
 }
 
-// GET action: get_loans
+// ─── GET: get_loans ────────────────────────────────────────────────────────
 async function getLoansHandler({ payload, res, error }) {
     const { userId, status, limit = 20, offset = 0 } = payload;
     try {
         const result = await loanSvc.getByBorrower(userId, { status, limit, offset });
         return res.json({
             success: true,
-            loans: result.documents.map(l => loanSvc.format(l)),
-            total: result.total,
+            loans:   result.documents.map(l => loanSvc.format(l)),
+            total:   result.total,
         });
     } catch (err) {
         error("getLoans: " + err.message);
@@ -192,7 +214,7 @@ async function getLoansHandler({ payload, res, error }) {
     }
 }
 
-// GET action: get_transactions
+// ─── GET: get_transactions ─────────────────────────────────────────────────
 async function getTransactionsHandler({ payload, res, error }) {
     const { userId, loanId, limit = 50, offset = 0 } = payload;
     try {
@@ -204,11 +226,12 @@ async function getTransactionsHandler({ payload, res, error }) {
 
         const summary = transactions.reduce(
             (acc, tx) => {
-                if (tx.type === "DISBURSEMENT") acc.totalIn += tx.amount;
-                if (["REPAYMENT", "PENALTY"].includes(tx.type)) acc.totalOut += tx.amount;
+                if (tx.type === "DISBURSEMENT") acc.totalIn  += tx.amount;
+                if (tx.type === "REPAYMENT")    acc.totalOut += tx.amount;
+                if (tx.type === "PENALTY")      acc.totalFee += tx.amount;
                 return acc;
             },
-            { totalIn: 0, totalOut: 0 }
+            { totalIn: 0, totalOut: 0, totalFee: 0 }
         );
 
         return res.json({ success: true, transactions, summary, total: result.total });
@@ -218,7 +241,7 @@ async function getTransactionsHandler({ payload, res, error }) {
     }
 }
 
-// POST action: update_loan_status (admin)
+// ─── POST: update_loan_status (admin) ──────────────────────────────────────
 async function updateLoanStatusHandler({ payload, res, log, error }) {
     const { adminKey, loanId, status } = payload;
     const VALID = ["ACTIVE", "COMPLETED", "OVERDUE", "CANCELLED"];
@@ -230,7 +253,7 @@ async function updateLoanStatusHandler({ payload, res, log, error }) {
 
     try {
         await loanSvc.updateStatus(loanId, status);
-        log(`Loan ${loanId} status → ${status}`);
+        log(`Loan ${loanId} → ${status}`);
         return res.json({ success: true, message: `Cập nhật trạng thái thành ${status}` });
     } catch (err) {
         error("updateLoanStatus: " + err.message);
@@ -238,4 +261,13 @@ async function updateLoanStatusHandler({ payload, res, log, error }) {
     }
 }
 
-module.exports = { createLoanHandler, approveLoanHandler, rejectLoanHandler, repayHandler, getLoanHandler, getLoansHandler, getTransactionsHandler, updateLoanStatusHandler };
+module.exports = {
+    createLoanHandler,
+    approveLoanHandler,
+    rejectLoanHandler,
+    repayHandler,
+    getLoanHandler,
+    getLoansHandler,
+    getTransactionsHandler,
+    updateLoanStatusHandler,
+};
