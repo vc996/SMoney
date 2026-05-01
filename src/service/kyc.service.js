@@ -4,10 +4,10 @@ const DB = () => process.env.APPWRITE_DATABASE_ID;
 const COL = "kyc_submissions";
 
 class KycService {
-    async submit({ userId, fullName, cccdNumber, cccdFrontUrl, cccdBackUrl, selfieUrl }) {
+    async submit({ userId, fullName, cccdNumber, phoneNumber }) {
         const id = String(userId);
         const now = new Date().toISOString();
-        const data = { userId: id, fullName, cccdNumber, cccdFrontUrl, cccdBackUrl, selfieUrl, status: "pending", rejectionReason: null, submittedAt: now, reviewedAt: null };
+        const data = { userId: id, fullName, cccdNumber, phoneNumber, status: "pending", submittedAt: now, reviewedAt: null };
 
         try {
             const existing = await databases.getDocument(DB(), COL, id);
@@ -44,8 +44,8 @@ class KycService {
             userId: kyc.userId,
             fullName: kyc.fullName,
             cccdNumber: kyc.cccdNumber ? `****${kyc.cccdNumber.slice(-4)}` : null,
+            phoneNumber: kyc.phoneNumber ? `****${kyc.phoneNumber.slice(-3)}` : null,
             status: kyc.status,
-            rejectionReason: kyc.rejectionReason,
             submittedAt: kyc.submittedAt,
             reviewedAt: kyc.reviewedAt,
         };

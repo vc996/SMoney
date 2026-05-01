@@ -7,13 +7,13 @@ const userSvc = new UserService();
 
 // POST action: submit_kyc
 async function submitKycHandler({ payload, res, log, error }) {
-    const { userId, fullName, cccdNumber, cccdFrontUrl, cccdBackUrl, selfieUrl } = payload;
+    const { userId, fullName, cccdNumber, phoneNumber } = payload;
 
-    const errors = validateKYC({ fullName, cccdNumber, cccdFrontUrl, cccdBackUrl, selfieUrl });
+    const errors = validateKYC({ fullName, cccdNumber, phoneNumber });
     if (errors.length) return res.json({ success: false, message: errors[0] }, 400);
 
     try {
-        const kyc = await kycSvc.submit({ userId, fullName, cccdNumber, cccdFrontUrl, cccdBackUrl, selfieUrl });
+        const kyc = await kycSvc.submit({ userId, fullName, cccdNumber, phoneNumber });
         await userSvc.updateKycStatus(userId, "pending");
 
         log(`KYC submitted: ${userId}`);
