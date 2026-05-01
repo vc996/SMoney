@@ -15,10 +15,16 @@ module.exports = async (context) => {
         if (payload?.body) payload = typeof payload.body === "string" ? JSON.parse(payload.body) : payload.body;
         if (payload?.data) payload = typeof payload.data === "string" ? JSON.parse(payload.data) : payload.data;
 
-        log(`Action: ${payload?.action || "auth"} | User: ${payload?.userId || "anon"}`);
+        const action = payload?.action || "auth";
         context.payload = payload;
 
-        return await router(context);
+        const result = await router(context);
+
+        // userId chỉ có sau khi auth middleware inject vào payload
+        const resolvedUser = context.payload?.userId || "anon";
+        log(`Action: ${action} | User: ${resolvedUser}`);
+
+        return result;
     } catch (e) {
         error("Parse error: " + e.message);
         return context.res.json({ success: false, message: "Invalid payload" }, 400);
