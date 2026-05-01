@@ -11,20 +11,23 @@ class LoanService {
         const monthlyPayment = calcMonthlyPayment(amount, annualRate, termMonths);
         const totalRepayable = calcTotalRepayable(monthlyPayment, termMonths);
 
+        // Dùng placeholder date để thoả schema Appwrite (required field)
+        // Hai trường này sẽ được tính lại chính xác từ thời điểm admin duyệt
+        const now = new Date().toISOString();
         return await databases.createDocument(DB(), COL, ID.unique(), {
-            borrowerId:      String(borrowerId),
+            borrowerId:       String(borrowerId),
             amount,
-            currency:        currency || "VND",
-            interestRate:    annualRate,
+            currency:         currency || "VND",
+            interestRate:     annualRate,
             termMonths,
             monthlyPayment,
             totalRepayable,
-            paidAmount:      0,
+            paidAmount:       0,
             installmentsPaid: 0,
-            status:          "PENDING",   // chờ duyệt
-            note:            note || null,
-            dueDate:         null,         // set khi admin duyệt
-            nextPaymentDate: null,         // set khi admin duyệt
+            status:           "PENDING",
+            note:             note || null,
+            dueDate:          calcDueDate(now, termMonths),
+            nextPaymentDate:  calcNextPaymentDate(now, 0),
         });
     }
 

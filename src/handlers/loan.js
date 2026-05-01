@@ -14,7 +14,15 @@ const configSvc = new ConfigService();
 async function createLoanHandler({ payload, res, log, error }) {
     const { userId, amount, currency = "VND", termMonths, note } = payload;
 
-    const config = await configSvc.get().catch(() => null);
+    const [config, user] = await Promise.all([
+        configSvc.get().catch(() => null),
+        userSvc.getOrCreate(userId),
+    ]);
+
+    // Kiểm tra KYC trước khi cho vay
+    if (user.kycStatus !== "approved")
+        return res.json({ success: false, message: "Bạn cần xác minh danh tính (KYC) trước khi tạo khoản vay", requiresKyc: true }, 403);
+
     const errors = validateCreateLoan({ amount, currency, termMonths }, config ?? {});
     if (errors.length) return res.json({ success: false, message: errors[0] }, 400);
 
