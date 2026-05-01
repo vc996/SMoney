@@ -8,10 +8,7 @@ const txSvc = new TransactionService();
 const userSvc = new UserService();
 const kycSvc = new KycService();
 
-/**
- * GET action: get_dashboard
- * Tổng hợp mọi thứ cần thiết để render màn hình Dashboard
- */
+// GET action: get_dashboard
 async function getDashboardHandler({ payload, res, error }) {
     const { userId } = payload;
 
@@ -23,29 +20,24 @@ async function getDashboardHandler({ payload, res, error }) {
             kycSvc.getByUser(userId),
         ]);
 
-        const loans = loansResult.documents.map(l => loanSvc.formatLoan(l));
-        const recentTx = recentTxResult.documents.map(t => txSvc.formatTx(t));
+        const loans = loansResult.documents.map(l => loanSvc.format(l));
+        const recentTransactions = recentTxResult.documents.map(t => txSvc.format(t));
 
-        // Khoản vay đang active
-        const activeLoans = loans.filter(l => l.status === "ACTIVE");
+        const activeLoans = loans.filter(l => ["ACTIVE", "OVERDUE"].includes(l.status));
         const activeOne = activeLoans[0] ?? null;
 
-        // Tính toán widget khoản vay chính
-        let loanWidget = null;
-        if (activeOne) {
-            loanWidget = {
-                loanId: activeOne.id,
-                amount: activeOne.amount,
-                currency: activeOne.currency,
-                progressPercent: activeOne.progressPercent,
-                paidAmount: activeOne.paidAmount,
-                remainingAmount: activeOne.totalRepayable - activeOne.paidAmount,
-                monthlyPayment: activeOne.monthlyPayment,
-                nextPaymentDate: activeOne.nextPaymentDate,
-                installmentsLeft: activeOne.installmentsLeft,
-                status: activeOne.status,
-            };
-        }
+        const loanWidget = activeOne ? {
+            loanId: activeOne.id,
+            amount: activeOne.amount,
+            currency: activeOne.currency,
+            progressPercent: activeOne.progressPercent,
+            paidAmount: activeOne.paidAmount,
+            remainingAmount: activeOne.remainingAmount,
+            monthlyPayment: activeOne.monthlyPayment,
+            nextPaymentDate: activeOne.nextPaymentDate,
+            installmentsLeft: activeOne.installmentsLeft,
+            status: activeOne.status,
+        } : null;
 
         return res.json({
             success: true,
@@ -54,25 +46,18 @@ async function getDashboardHandler({ payload, res, error }) {
                     userId,
                     kycStatus: user.kycStatus,
                     creditScore: user.creditScore,
-                    walletAddress: user.walletAddress,
                     totalBorrowed: user.totalBorrowed,
                     totalRepaid: user.totalRepaid,
                     activeLoansCount: user.activeLoansCount,
                 },
-                kyc: kycSvc.formatKyc(kyc),
+                kyc: kycSvc.format(kyc),
                 loanWidget,
-                activeLoansCount: activeLoans.length,
-                recentTransactions: recentTx,
+                recentTransactions,
                 allLoans: loans,
-                networkStatus: {
-                    connected: true,
-                    network: "Polygon Mainnet",
-                    label: "Blockchain: Connected",
-                },
             },
         });
     } catch (err) {
-        error("getDashboard error: " + err.message);
+        error("getDashboard: " + err.message);
         return res.json({ success: false, message: "Lỗi server" }, 500);
     }
 }

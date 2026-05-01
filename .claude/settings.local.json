@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//e/project/tutienlo_tel_min/**)",
+      "Bash(gh pr *)"
+    ]
+  }
+}

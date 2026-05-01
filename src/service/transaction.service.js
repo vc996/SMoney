@@ -4,22 +4,24 @@ const DB = () => process.env.APPWRITE_DATABASE_ID;
 const COL = "transactions";
 
 const TX_TYPES = {
-    DISBURSEMENT: "DISBURSEMENT",
-    REPAYMENT: "REPAYMENT",
-    PENALTY: "PENALTY",
-    LIQUIDATION: "LIQUIDATION",
+    DISBURSEMENT: "DISBURSEMENT", // Giải ngân
+    REPAYMENT:    "REPAYMENT",    // Trả nợ
+    PENALTY:      "PENALTY",      // Phí phạt
+};
+
+const TX_LABELS = {
+    DISBURSEMENT: "Giải ngân",
+    REPAYMENT:    "Trả nợ",
+    PENALTY:      "Phí phạt",
 };
 
 class TransactionService {
-    async record({ loanId, userId, type, amount, txHash, blockNumber, explorerUrl, note = null }) {
+    async record({ loanId, userId, type, amount, note = null }) {
         return await databases.createDocument(DB(), COL, ID.unique(), {
             loanId: String(loanId),
             userId: String(userId),
             type,
             amount,
-            txHash,
-            blockNumber,
-            explorerUrl,
             note,
             createdAt: new Date().toISOString(),
         });
@@ -43,23 +45,14 @@ class TransactionService {
         ]);
     }
 
-    formatTx(tx) {
-        const labels = {
-            DISBURSEMENT: "Giải ngân",
-            REPAYMENT: "Trả nợ",
-            PENALTY: "Phí phạt",
-            LIQUIDATION: "Thanh lý tài sản",
-        };
+    format(tx) {
         return {
             id: tx.$id,
             loanId: tx.loanId,
             userId: tx.userId,
             type: tx.type,
-            label: labels[tx.type] || tx.type,
+            label: TX_LABELS[tx.type] || tx.type,
             amount: tx.amount,
-            txHash: tx.txHash,
-            blockNumber: tx.blockNumber,
-            explorerUrl: tx.explorerUrl,
             note: tx.note,
             createdAt: tx.createdAt,
         };

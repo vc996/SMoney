@@ -1,4 +1,4 @@
-const { databases, Query } = require("../config/appwrite.config");
+const { databases } = require("../config/appwrite.config");
 
 const DB = () => process.env.APPWRITE_DATABASE_ID;
 const COL = "kyc_submissions";
@@ -7,38 +7,15 @@ class KycService {
     async submit({ userId, fullName, cccdNumber, cccdFrontUrl, cccdBackUrl, selfieUrl }) {
         const id = String(userId);
         const now = new Date().toISOString();
+        const data = { userId: id, fullName, cccdNumber, cccdFrontUrl, cccdBackUrl, selfieUrl, status: "pending", rejectionReason: null, submittedAt: now, reviewedAt: null };
 
         try {
-            // Nếu đã có thì cập nhật (re-submit)
             const existing = await databases.getDocument(DB(), COL, id);
-            if (["approved"].includes(existing.status)) {
-                throw new Error("KYC đã được duyệt, không thể nộp lại");
-            }
-            return await databases.updateDocument(DB(), COL, id, {
-                fullName,
-                cccdNumber,
-                cccdFrontUrl,
-                cccdBackUrl,
-                selfieUrl,
-                status: "pending",
-                rejectionReason: null,
-                submittedAt: now,
-                reviewedAt: null,
-            });
+            if (existing.status === "approved") throw new Error("KYC đã được duyệt, không thể nộp lại");
+            return await databases.updateDocument(DB(), COL, id, data);
         } catch (err) {
             if (err.code === 404 || err.type === "document_not_found") {
-                return await databases.createDocument(DB(), COL, id, {
-                    userId: id,
-                    fullName,
-                    cccdNumber,
-                    cccdFrontUrl,
-                    cccdBackUrl,
-                    selfieUrl,
-                    status: "pending",
-                    rejectionReason: null,
-                    submittedAt: now,
-                    reviewedAt: null,
-                });
+                return await databases.createDocument(DB(), COL, id, data);
             }
             throw err;
         }
@@ -53,7 +30,6 @@ class KycService {
         }
     }
 
-    /** Dành cho admin: duyệt/từ chối KYC */
     async review(userId, { approved, rejectionReason = null }) {
         return await databases.updateDocument(DB(), COL, String(userId), {
             status: approved ? "approved" : "rejected",
@@ -62,7 +38,7 @@ class KycService {
         });
     }
 
-    formatKyc(kyc) {
+    format(kyc) {
         if (!kyc) return null;
         return {
             userId: kyc.userId,
