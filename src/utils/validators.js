@@ -1,16 +1,18 @@
 const SUPPORTED_CURRENCIES = ["VNDC", "VND", "USDT"];
-const SUPPORTED_TERMS = [3, 6, 12];
-const MIN_AMOUNT = 1_000_000;
-const MAX_AMOUNT = 500_000_000;
 
-function validateCreateLoan({ amount, currency, termMonths }) {
+function validateCreateLoan({ amount, currency, termMonths }, config = {}) {
+    const minAmount    = config.minAmount    ?? 1_000_000;
+    const maxAmount    = config.maxAmount    ?? 500_000_000;
+    const validTerms   = (config.terms ?? []).map(t => t.months).filter(Boolean);
+    const TERMS        = validTerms.length ? validTerms : [3, 6, 12];
+
     const errors = [];
-    if (!amount || typeof amount !== "number" || amount < MIN_AMOUNT || amount > MAX_AMOUNT)
-        errors.push(`Số tiền vay phải từ ${MIN_AMOUNT.toLocaleString()} đến ${MAX_AMOUNT.toLocaleString()}`);
+    if (!amount || typeof amount !== "number" || amount < minAmount || amount > maxAmount)
+        errors.push(`Số tiền vay phải từ ${minAmount.toLocaleString()} đến ${maxAmount.toLocaleString()}`);
     if (!SUPPORTED_CURRENCIES.includes(currency))
         errors.push(`Đơn vị tiền tệ phải là: ${SUPPORTED_CURRENCIES.join(", ")}`);
-    if (!SUPPORTED_TERMS.includes(termMonths))
-        errors.push(`Kỳ hạn phải là: ${SUPPORTED_TERMS.join(", ")} tháng`);
+    if (!TERMS.includes(termMonths))
+        errors.push(`Kỳ hạn phải là: ${TERMS.join(", ")} tháng`);
     return errors;
 }
 

@@ -1,18 +1,22 @@
 const { LoanService } = require("../service/loan.service");
 const { TransactionService, TX_TYPES } = require("../service/transaction.service");
 const { UserService } = require("../service/user.service");
+const { ConfigService } = require("../service/config.service");
 const { validateCreateLoan, validateRepay } = require("../utils/validators");
 const { calcLateFee } = require("../utils/interest");
 
 const loanSvc = new LoanService();
 const txSvc = new TransactionService();
 const userSvc = new UserService();
+const configSvc = new ConfigService();
 
 // POST action: create_loan
 async function createLoanHandler({ payload, res, log, error }) {
     const { userId, amount, currency = "VND", termMonths, note } = payload;
 
-    const errors = validateCreateLoan({ amount, currency, termMonths });
+    // Load dynamic config for validation limits
+    const config = await configSvc.get().catch(() => null);
+    const errors = validateCreateLoan({ amount, currency, termMonths }, config ?? {});
     if (errors.length) return res.json({ success: false, message: errors[0] }, 400);
 
     try {

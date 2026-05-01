@@ -2,6 +2,7 @@ const { authHandler } = require("./handlers/auth");
 const { getDashboardHandler } = require("./handlers/dashboard");
 const { createLoanHandler, repayHandler, getLoanHandler, getLoansHandler, getTransactionsHandler, updateLoanStatusHandler } = require("./handlers/loan");
 const { submitKycHandler, getKycStatusHandler, reviewKycHandler } = require("./handlers/kyc");
+const { getConfigHandler, updateConfigHandler } = require("./handlers/config");
 const { authMiddleware } = require("./middleware/auth.middleware");
 
 const PROTECTED = new Set([
@@ -38,6 +39,8 @@ async function router(context) {
         case "get_kyc_status":     return await getKycStatusHandler(context);
         case "review_kyc":         return await reviewKycHandler(context);
         case "update_loan_status": return await updateLoanStatusHandler(context);
+        case "get_config":         return await getConfigHandler(context);
+        case "update_config":      return await updateConfigHandler(context);
         default:
             return res.json({ success: false, message: `Action '${action}' không tồn tại` }, 404);
     }
