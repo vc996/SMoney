@@ -6,8 +6,8 @@ const COL = "kyc_submissions";
 class KycService {
     async submit({ userId, fullName, cccdNumber, phoneNumber }) {
         const id = String(userId);
-        const now = new Date().toISOString();
-        const data = { userId: id, fullName, cccdNumber, phoneNumber, status: "pending", submittedAt: now, reviewedAt: null };
+        // submittedAt / reviewedAt dùng $createdAt / $updatedAt của Appwrite — không lưu riêng
+        const data = { userId: id, fullName, cccdNumber, phoneNumber, status: "pending" };
 
         try {
             const existing = await databases.getDocument(DB(), COL, id);
@@ -31,11 +31,10 @@ class KycService {
     }
 
     async review(userId, { approved, rejectionReason = null }) {
-        return await databases.updateDocument(DB(), COL, String(userId), {
-            status: approved ? "approved" : "rejected",
-            rejectionReason: approved ? null : rejectionReason,
-            reviewedAt: new Date().toISOString(),
-        });
+        const data = { status: approved ? "approved" : "rejected" };
+        if (!approved && rejectionReason) data.rejectionReason = rejectionReason;
+        // reviewedAt tự cập nhật qua $updatedAt của Appwrite
+        return await databases.updateDocument(DB(), COL, String(userId), data);
     }
 
     format(kyc) {
@@ -46,8 +45,9 @@ class KycService {
             cccdNumber: kyc.cccdNumber ? `****${kyc.cccdNumber.slice(-4)}` : null,
             phoneNumber: kyc.phoneNumber ? `****${kyc.phoneNumber.slice(-3)}` : null,
             status: kyc.status,
-            submittedAt: kyc.submittedAt,
-            reviewedAt: kyc.reviewedAt,
+            rejectionReason: kyc.rejectionReason || null,
+            submittedAt: kyc.$createdAt,   // Appwrite system field
+            reviewedAt: kyc.status !== "pending" ? kyc.$updatedAt : null,
         };
     }
 }
