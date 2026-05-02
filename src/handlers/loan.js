@@ -16,7 +16,7 @@ const tierSvc   = new TierService();
 
 // ─── POST: create_loan ─────────────────────────────────────────────────────
 async function createLoanHandler({ payload, res, log, error }) {
-    const { userId, amount, currency = "VND", termMonths, note } = payload;
+    const { userId, amount, currency = "VND", termMonths } = payload;
 
     // Lấy config, tiers, user và kyc song song
     const [config, tiers, , kyc] = await Promise.all([
@@ -44,7 +44,7 @@ async function createLoanHandler({ payload, res, log, error }) {
     const interestRate = tierRate ?? termCfg?.rate ?? null;
 
     try {
-        const loan = await loanSvc.create({ borrowerId: userId, amount, currency, termMonths, interestRate, note });
+        const loan = await loanSvc.create({ borrowerId: userId, amount, currency, termMonths, interestRate });
         log(`Loan PENDING: ${loan.$id} by ${userId}`);
         return res.json({
             success: true,

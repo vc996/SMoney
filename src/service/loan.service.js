@@ -9,7 +9,7 @@ class LoanService {
      * Tạo đơn vay mới — trạng thái PENDING, chờ admin duyệt.
      * dueDate & nextPaymentDate để null, được set khi approve.
      */
-    async create({ borrowerId, amount, currency, termMonths, interestRate, note }) {
+    async create({ borrowerId, amount, currency, termMonths, interestRate }) {
         const annualRate     = interestRate ?? 15;
         const monthlyPayment = calcMonthlyPayment(amount, annualRate, termMonths);
         const totalRepayable = calcTotalRepayable(monthlyPayment, termMonths);
@@ -25,7 +25,6 @@ class LoanService {
             paidAmount:       0,
             installmentsPaid: 0,
             status:           "PENDING",
-            note:             note || null,
             dueDate:          null,   // nullable — set khi admin duyệt
             nextPaymentDate:  null,   // nullable — set khi admin duyệt
             rejectionReason:  null,
