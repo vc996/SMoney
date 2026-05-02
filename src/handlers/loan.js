@@ -1,6 +1,7 @@
 const { LoanService } = require("../service/loan.service");
 const { TransactionService, TX_TYPES } = require("../service/transaction.service");
 const { UserService } = require("../service/user.service");
+const { KycService } = require("../service/kyc.service");
 const { ConfigService } = require("../service/config.service");
 const { TierService } = require("../service/tier.service");
 const { validateCreateLoan, validateRepay } = require("../utils/validators");
@@ -9,6 +10,7 @@ const { calcLateFee } = require("../utils/interest");
 const loanSvc   = new LoanService();
 const txSvc     = new TransactionService();
 const userSvc   = new UserService();
+const kycSvc    = new KycService();
 const configSvc = new ConfigService();
 const tierSvc   = new TierService();
 
@@ -16,15 +18,16 @@ const tierSvc   = new TierService();
 async function createLoanHandler({ payload, res, log, error }) {
     const { userId, amount, currency = "VND", termMonths, note } = payload;
 
-    // Lấy config, tiers và user song song
-    const [config, tiers, user] = await Promise.all([
+    // Lấy config, tiers, user và kyc song song
+    const [config, tiers, , kyc] = await Promise.all([
         configSvc.get().catch(() => null),
         tierSvc.getAll().catch(() => []),
-        userSvc.getOrCreate(userId),
+        userSvc.getOrCreate(userId),   // đảm bảo user tồn tại
+        kycSvc.getByUser(userId),
     ]);
 
-    // KYC phải được duyệt
-    if (user.kycStatus !== "approved")
+    // KYC phải được duyệt (nguồn duy nhất: kyc_submissions)
+    if (kyc?.status !== "approved")
         return res.json({
             success:     false,
             message:     "Bạn cần xác minh danh tính (KYC) trước khi tạo khoản vay",

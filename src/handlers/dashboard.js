@@ -53,7 +53,9 @@ async function getDashboardHandler({ payload, res, error }) {
             dashboard: {
                 user: {
                     userId,
-                    kycStatus:        user.kycStatus,
+                    // kycStatus lấy từ kyc_submissions (nguồn duy nhất)
+                    // null doc = chưa nộp → "pending"
+                    kycStatus:        kyc?.status ?? "pending",
                     creditScore:      user.creditScore,
                     totalBorrowed:    user.totalBorrowed,
                     totalRepaid:      user.totalRepaid,

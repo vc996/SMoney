@@ -33,11 +33,11 @@ async function getKycStatusHandler({ payload, res, error }) {
     const { userId } = payload;
     try {
         const kyc    = await kycSvc.getByUser(userId);
-        const status = kyc?.status || "none";
+        // Không có doc = chưa nộp, coi như "pending" (chưa xác minh)
+        const status = kyc?.status ?? "pending";
 
         const message = {
-            none:     "Chưa nộp hồ sơ KYC",
-            pending:  "Hồ sơ đang được xét duyệt",
+            pending:  kyc ? "Hồ sơ đang được xét duyệt" : "Chưa nộp hồ sơ KYC",
             approved: "Xác minh danh tính thành công",
             rejected: `Hồ sơ bị từ chối: ${kyc?.rejectionReason || "Thông tin không hợp lệ"}`,
         }[status] ?? "Chưa nộp hồ sơ KYC";

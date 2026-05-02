@@ -1,10 +1,7 @@
 const { databases, ID, Query } = require("../config/appwrite.config");
-const { UserService } = require("./user.service");
 
 const DB  = () => process.env.APPWRITE_DATABASE_ID;
 const COL = "kyc_submissions";
-
-const userSvc = new UserService();
 
 class KycService {
     /** Tìm document KYC theo userId field, trả null nếu chưa có */
@@ -36,7 +33,6 @@ class KycService {
             doc = await databases.createDocument(DB(), COL, ID.unique(), data);
         }
 
-        await userSvc.updateKycStatus(uid, "pending");
         return doc;
     }
 
@@ -53,7 +49,6 @@ class KycService {
             rejectionReason: approved ? null : (rejectionReason || null),
         });
 
-        await userSvc.updateKycStatus(uid, newStatus);
         return doc;
     }
 

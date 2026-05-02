@@ -17,18 +17,11 @@ class UserService {
 
         return await databases.createDocument(DB(), COL, ID.unique(), {
             userId:           uid,
-            kycStatus:        "pending",
             creditScore:      500,
             totalBorrowed:    0,
             totalRepaid:      0,
             activeLoansCount: 0,
         });
-    }
-
-    /** Cập nhật trạng thái KYC */
-    async updateKycStatus(telegramId, status) {
-        const user = await this.getOrCreate(telegramId);
-        return await databases.updateDocument(DB(), COL, user.$id, { kycStatus: status });
     }
 
     /** Cộng/trừ điểm tín dụng, giữ trong [0, 1000] */
