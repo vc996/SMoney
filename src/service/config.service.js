@@ -13,6 +13,7 @@ const DEFAULTS = {
         { months: 6,  rate: 15, label: "6 tháng",  tag: "Phổ biến" },
         { months: 12, rate: 12, label: "12 tháng", tag: "Lãi thấp nhất" },
     ]),
+    groupLink: "",
 };
 
 class ConfigService {
@@ -28,12 +29,13 @@ class ConfigService {
         }
     }
 
-    async update({ minAmount, maxAmount, quickAmounts, terms }) {
+    async update({ minAmount, maxAmount, quickAmounts, terms, groupLink }) {
         const data = {};
         if (minAmount    !== undefined) data.minAmount    = Number(minAmount);
         if (maxAmount    !== undefined) data.maxAmount    = Number(maxAmount);
         if (quickAmounts !== undefined) data.quickAmounts = JSON.stringify(quickAmounts);
         if (terms        !== undefined) data.terms        = JSON.stringify(terms);
+        if (groupLink    !== undefined) data.groupLink    = String(groupLink);
 
         try {
             await databases.getDocument(DB(), COL, DOC);
@@ -52,6 +54,7 @@ class ConfigService {
             maxAmount:    doc.maxAmount    ?? DEFAULTS.maxAmount,
             quickAmounts: this._tryParse(doc.quickAmounts, [5_000_000, 10_000_000, 20_000_000, 50_000_000]),
             terms:        this._tryParse(doc.terms, JSON.parse(DEFAULTS.terms)),
+            groupLink:    doc.groupLink    || "",
         };
     }
 

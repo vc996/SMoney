@@ -19,7 +19,7 @@ class KycService {
     /** Nộp hoặc nộp lại hồ sơ KYC */
     async submit({ userId, fullName, cccdNumber, phoneNumber }) {
         const uid  = String(userId);
-        const data = { userId: uid, fullName, cccdNumber, phoneNumber, status: "pending" };
+        const data = { userId: uid, fullName, cccdNumber, phoneNumber, status: "pending", rejectionReason: null };
 
         const existing = await this.getByUser(uid);
 

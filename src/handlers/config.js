@@ -15,7 +15,7 @@ async function getConfigHandler({ res, error }) {
 
 // POST action: update_config  (admin key protected)
 async function updateConfigHandler({ payload, res, log, error }) {
-    const { adminKey, minAmount, maxAmount, quickAmounts, terms } = payload;
+    const { adminKey, minAmount, maxAmount, quickAmounts, terms, groupLink } = payload;
 
     if (adminKey !== process.env.ADMIN_KEY)
         return res.json({ success: false, message: "Không có quyền admin" }, 403);
@@ -31,7 +31,7 @@ async function updateConfigHandler({ payload, res, log, error }) {
         return res.json({ success: false, message: "terms phải là mảng object" }, 400);
 
     try {
-        await configSvc.update({ minAmount, maxAmount, quickAmounts, terms });
+        await configSvc.update({ minAmount, maxAmount, quickAmounts, terms, groupLink });
         const config = await configSvc.get();
         log("Config updated by admin");
         return res.json({ success: true, message: "Cập nhật cấu hình thành công", config });
