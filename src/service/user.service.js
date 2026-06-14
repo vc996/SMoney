@@ -32,7 +32,6 @@ class UserService {
                 name,
                 role: "member",
                 balance: 0,
-                createdAt: new Date().toISOString(),
             }
         );
     }
