@@ -3,7 +3,7 @@ const router = require("./router");
 module.exports = async (context) => {
     const { log, error, req } = context;
 
-    const missing = ["APPWRITE_DATABASE_ID", "BOT_TOKEN", "JWT_SECRET"].filter(k => !process.env[k]);
+    const missing = ["APPWRITE_DATABASE_ID", "APPWRITE_ENDPOINT", "APPWRITE_PROJECT_ID", "JWT_SECRET"].filter(k => !process.env[k]);
     if (missing.length) {
         error(`Missing env: ${missing.join(", ")}`);
         return context.res.json({ success: false, message: "Server configuration error" }, 500);

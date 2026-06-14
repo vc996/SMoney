@@ -1,5 +1,5 @@
-const { authHandler }           = require("./handlers/auth");
-const { getDashboardHandler }   = require("./handlers/dashboard");
+const { authHandler } = require("./handlers/auth");
+const { getDashboardHandler } = require("./handlers/dashboard");
 const { getConfigHandler, updateConfigHandler } = require("./handlers/config");
 const { getTiersHandler } = require("./handlers/tier");
 const {
@@ -29,32 +29,32 @@ async function router(context) {
 
     switch (action) {
         // ── Auth ──────────────────────────────────────────
-        case "auth":               return authHandler(context);
+        case "auth": return authHandler(context);
 
         // ── Dashboard ─────────────────────────────────────
-        case "get_dashboard":      return getDashboardHandler(context);
+        case "get_dashboard": return getDashboardHandler(context);
 
         // ── Config ────────────────────────────────────────
-        case "get_config":         return getConfigHandler(context);
-        case "update_config":      return updateConfigHandler(context);
+        case "get_config": return getConfigHandler(context);
+        case "update_config": return updateConfigHandler(context);
 
         // ── Loan Tiers ────────────────────────────────────
-        case "get_tiers":          return getTiersHandler(context);
+        case "get_tiers": return getTiersHandler(context);
 
         // ── Loans ─────────────────────────────────────────
-        case "create_loan":        return createLoanHandler(context);
-        case "approve_loan":       return approveLoanHandler(context);
-        case "reject_loan":        return rejectLoanHandler(context);
-        case "repay":              return repayHandler(context);
-        case "get_loan":           return getLoanHandler(context);
-        case "get_loans":          return getLoansHandler(context);
-        case "get_transactions":   return getTransactionsHandler(context);
+        case "create_loan": return createLoanHandler(context);
+        case "approve_loan": return approveLoanHandler(context);
+        case "reject_loan": return rejectLoanHandler(context);
+        case "repay": return repayHandler(context);
+        case "get_loan": return getLoanHandler(context);
+        case "get_loans": return getLoansHandler(context);
+        case "get_transactions": return getTransactionsHandler(context);
         case "update_loan_status": return updateLoanStatusHandler(context);
 
         // ── KYC ───────────────────────────────────────────
-        case "submit_kyc":         return submitKycHandler(context);
-        case "get_kyc_status":     return getKycStatusHandler(context);
-        case "review_kyc":         return reviewKycHandler(context);
+        case "submit_kyc": return submitKycHandler(context);
+        case "get_kyc_status": return getKycStatusHandler(context);
+        case "review_kyc": return reviewKycHandler(context);
 
         default:
             return res.json({ success: false, message: `Action '${action}' không tồn tại` }, 404);
