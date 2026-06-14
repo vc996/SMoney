@@ -1,4 +1,4 @@
-const { TelegramAuthService } = require("../service/auth.service");
+const { Client, Account } = require("node-appwrite");
 const { UserService } = require("../service/user.service");
 const { CacheService } = require("../security/cache.service");
 const { RateLimitService } = require("../security/rateLimit.service");
@@ -6,15 +6,14 @@ const { JwtService } = require("../security/jwt.service");
 
 const cache = new CacheService();
 const rateLimitIP = new RateLimitService(500);
-const rateLimitUser = new RateLimitService(1000);
 const userSvc = new UserService();
 
 async function authHandler({ payload, req, res, log, error }) {
-    const { BOT_TOKEN, JWT_SECRET } = process.env;
+    const { APPWRITE_ENDPOINT, APPWRITE_PROJECT_ID, JWT_SECRET } = process.env;
 
-    const initData = payload?.initData;
-    if (!initData) {
-        return res.json({ success: false, message: "Thiếu initData" }, 400);
+    const jwt = payload?.jwt;
+    if (!jwt) {
+        return res.json({ success: false, message: "Thiếu JWT" }, 400);
     }
 
     const ip = req.headers["x-forwarded-for"] || "unknown";
@@ -22,18 +21,21 @@ async function authHandler({ payload, req, res, log, error }) {
         return res.json({ success: false, message: "Quá nhiều yêu cầu, thử lại sau" }, 429);
     }
 
-    const auth = new TelegramAuthService(BOT_TOKEN);
-    const result = auth.verify(initData);
+    // Verify Appwrite JWT by using it to call account.get()
+    const client = new Client()
+        .setEndpoint(APPWRITE_ENDPOINT)
+        .setProject(APPWRITE_PROJECT_ID)
+        .setJWT(jwt);
 
-    if (!result?.isValid) {
-        return res.json({ success: false, message: "Xác thực thất bại" }, 401);
+    const accountSvc = new Account(client);
+    let appwriteUser;
+    try {
+        appwriteUser = await accountSvc.get();
+    } catch (err) {
+        return res.json({ success: false, message: "JWT không hợp lệ" }, 401);
     }
 
-    const userId = String(result.userId);
-
-    if (!rateLimitUser.check(userId)) {
-        return res.json({ success: false, message: "Quá nhiều yêu cầu, thử lại sau" }, 429);
-    }
+    const userId = appwriteUser.$id;
 
     const cached = cache.getCache(userId);
     if (cached) return res.json({ success: true, ...cached });
