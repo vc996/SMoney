@@ -21,7 +21,6 @@ async function authHandler({ payload, req, res, log, error }) {
         return res.json({ success: false, message: "Quá nhiều yêu cầu, thử lại sau" }, 429);
     }
 
-    // Verify Appwrite JWT by using it to call account.get()
     const client = new Client()
         .setEndpoint(APPWRITE_ENDPOINT)
         .setProject(APPWRITE_PROJECT_ID)
