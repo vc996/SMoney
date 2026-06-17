@@ -1,52 +1,82 @@
-// ── 1. ĐỔI SANG CÚ PHÁP CŨ (COMMONJS) ──
-const { databases, DB_ID, COLLECTION_TASKS, ID } = require("../config/appwrite");
+const { TaskService } = require("../service/task.service");
+
+const taskSvc = new TaskService();
 
 async function createTaskHandler(context) {
-    const { payload, res, log, error } = context;
 
-    try {
-        // Dữ liệu payload đã được bóc tách và giải mã JSON sạch sẽ tại file main.js/index.js
-        const { sku, title, category, description, importPrice, commission, totalQuantity } = payload;
+    const { payload, res } = context;
 
-        // Gọi trực tiếp thực thể databases được nhúng từ file cấu hình dùng chung
-        const task = await databases.createDocument(
-            DB_ID,
-            COLLECTION_TASKS,
-            ID.unique(),
-            {
-                sku: sku.trim().toUpperCase(),
-                title: title.trim(),
-                category: category.trim(),
-                description: description.trim(),
-                importPrice: parseInt(importPrice),
-                commission: parseInt(commission),
-                totalQuantity: parseInt(totalQuantity),
-                remainingQuantity: parseInt(totalQuantity),
-                status: "available",
-                createdBy: payload?.userId || "admin_system", // ID do middleware inject vào payload
-                createdAt: new Date().toISOString()
-            }
-        );
-
-        log(`[SUCCESS] Đã khởi tạo chiến dịch thành công | SKU: ${sku}`);
+    if (payload.role !== "admin") {
 
         return res.json({
+            success: false,
+            message: "Bạn không có quyền",
+        }, 403);
+
+    }
+
+    try {
+
+        const task = await taskSvc.create({
+
+            sku: payload.sku.trim().toUpperCase(),
+
+            title: payload.title,
+
+            category: payload.category,
+
+            description: payload.description,
+
+            importPrice: Number(payload.importPrice),
+
+            commission: Number(payload.commission),
+
+            totalQuantity: Number(payload.totalQuantity),
+
+            remainingQuantity: Number(payload.totalQuantity),
+
+            status: "available",
+
+            createdBy: payload.userId,
+
+            createdAt: new Date().toISOString(),
+
+        });
+
+        return res.json({
+
             success: true,
-            message: `Khởi tạo chiến dịch [${sku}] trên hệ thống Cloud hoàn tất!`,
-            taskId: task.$id
+
+            taskId: task.$id,
+
         }, 201);
 
     } catch (err) {
-        error(`[ERROR] Thất bại tại createTaskHandler: ${err.message}`);
 
-        // Bắt lỗi trùng lặp Unique Index (Mã SKU đã tồn tại) từ Appwrite
         if (err.code === 409) {
-            return res.json({ success: false, message: "Mã kiểm kê SKU này đã tồn tại trên tổng kho!" }, 409);
+
+            return res.json({
+
+                success: false,
+
+                message: "SKU đã tồn tại",
+
+            }, 409);
+
         }
 
-        return res.json({ success: false, message: "Lỗi đồng bộ cơ sở dữ liệu hệ thống." }, 500);
+        return res.json({
+
+            success: false,
+
+            message: "Database error",
+
+        }, 500);
+
     }
+
 }
 
-// ── 2. XUẤT HÀM THEO KIỂU CŨ ──
-module.exports = { createTaskHandler };
+module.exports = {
+    createTaskHandler,
+};

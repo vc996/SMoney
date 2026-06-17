@@ -1,6 +1,5 @@
 const { Client, Databases, ID, Query } = require("node-appwrite");
 
-// Khởi tạo instance kết nối
 const client = new Client()
     .setEndpoint(process.env.APPWRITE_ENDPOINT)
     .setProject(process.env.APPWRITE_PROJECT_ID)
@@ -8,7 +7,6 @@ const client = new Client()
 
 const databases = new Databases(client);
 
-// Xuất bản ghi (Export) theo cách cũ tập trung
 module.exports = {
     databases,
     ID,
