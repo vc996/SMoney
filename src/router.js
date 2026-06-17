@@ -1,50 +1,79 @@
 const { authMiddleware } = require("./middleware/auth.middleware");
 
-const USER_ACTIONS = new Set([
+// Các action yêu cầu đăng nhập
+const AUTH_ACTIONS = new Set([
+    "auth",
     "get_profile",
+    "create_task",
+    "take_task",
+    "submit_proof",
 ]);
 
+// Các action chỉ Admin được phép
 const ADMIN_ACTIONS = new Set([
     "create_task",
+    "verify_payout",
+    "get_admin_inventory",
 ]);
 
 async function router(context) {
 
     const { payload, res } = context;
 
-    const action = payload.action || "";
+    const action = payload?.action ?? "auth";
 
-    if (
-        USER_ACTIONS.has(action) ||
-        ADMIN_ACTIONS.has(action)
-    ) {
+    // Kiểm tra xác thực
+    if (AUTH_ACTIONS.has(action)) {
 
-        const auth = await authMiddleware(context);
+        const authResult = await authMiddleware(context);
 
-        if (auth) return auth;
+        if (authResult) {
+            return authResult;
+        }
 
     }
 
+    // Kiểm tra quyền Admin
+    if (ADMIN_ACTIONS.has(action)) {
+
+        if (context.payload.role !== "admin") {
+
+            return res.json({
+                success: false,
+                message: "Bạn không có quyền thực hiện chức năng này."
+            }, 403);
+
+        }
+
+    }
+
+    // Điều hướng
     switch (action) {
 
-        case "get_profile":
+        case "auth":
+            return require("./handlers/user")
+                .authHandler(context);
 
+        case "get_profile":
             return require("./handlers/user")
                 .getProfileHandler(context);
 
         case "create_task":
-
             return require("./handlers/task")
                 .createTaskHandler(context);
 
+        case "take_task":
+            return require("./handlers/task")
+                .takeTaskHandler(context);
+
+        case "submit_proof":
+            return require("./handlers/task")
+                .submitProofHandler(context);
+
         default:
-
             return res.json({
-
                 success: false,
-
-                message: "Action không tồn tại",
-
+                message: `Action '${action}' không tồn tại`
             }, 404);
 
     }
