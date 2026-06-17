@@ -2,7 +2,6 @@ const { authMiddleware } = require("./middleware/auth.middleware");
 
 // Các action yêu cầu đăng nhập
 const AUTH_ACTIONS = new Set([
-    "auth",
     "get_profile",
     "create_task",
     "take_task",
@@ -20,10 +19,17 @@ async function router(context) {
 
     const { payload, res } = context;
 
-    const action = payload?.action ?? "auth";
+    const action = payload?.action;
 
-    // Kiểm tra xác thực
-    if (AUTH_ACTIONS.has(action)) {
+    if (!action) {
+        return res.json({
+            success: false,
+            message: "Thiếu action"
+        }, 400);
+    }
+
+    // Xác thực JWT
+    if (AUTH_ACTIONS.has(action) || ADMIN_ACTIONS.has(action)) {
 
         const authResult = await authMiddleware(context);
 
@@ -47,12 +53,7 @@ async function router(context) {
 
     }
 
-    // Điều hướng
     switch (action) {
-
-        case "auth":
-            return require("./handlers/user")
-                .authHandler(context);
 
         case "get_profile":
             return require("./handlers/user")
