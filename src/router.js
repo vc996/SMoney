@@ -39,6 +39,7 @@ async function router(context) {
     if (ADMIN_ACTIONS.has(action)) {
 
         const labels = context.payload.user.labels || [];
+        console.log(user.labels);
 
         if (!labels.includes("admin")) {
 

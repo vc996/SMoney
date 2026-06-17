@@ -23,7 +23,8 @@ async function authMiddleware(context) {
     try {
 
         const user = await account.get();
-
+        console.log(user);
+        log(JSON.stringify(user, null, 2));
         context.payload.userId = user.$id;
         context.payload.user = user;
 
