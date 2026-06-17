@@ -13,7 +13,7 @@ const ADMIN_ACTIONS = new Set([
 
 async function router(context) {
 
-    const { payload, res } = context;
+    const { payload, res, log } = context;
 
     const action = payload.action;
 
@@ -35,11 +35,14 @@ async function router(context) {
 
     }
 
-    // Kiểm tra quyền Admin bằng Labels
+    // Check quyền Admin
     if (ADMIN_ACTIONS.has(action)) {
 
-        const labels = context.payload.user.labels || [];
-        console.log(user.labels);
+        log(JSON.stringify(context.payload.user));
+
+        const labels = context.payload.user?.labels ?? [];
+
+        log(JSON.stringify(labels));
 
         if (!labels.includes("admin")) {
 
@@ -55,12 +58,10 @@ async function router(context) {
     switch (action) {
 
         case "create_task":
-            return require("./handlers/task")
-                .createTaskHandler(context);
+            return require("./handlers/task").createTaskHandler(context);
 
         case "take_task":
-            return require("./handlers/task")
-                .takeTaskHandler(context);
+            return require("./handlers/task").takeTaskHandler(context);
 
         default:
             return res.json({
