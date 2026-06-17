@@ -6,14 +6,6 @@ async function createTaskHandler(context) {
 
     const { payload, res } = context;
 
-    if (payload.role !== "admin") {
-
-        return res.json({
-            success: false,
-            message: "Bạn không có quyền",
-        }, 403);
-
-    }
 
     try {
 
