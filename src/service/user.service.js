@@ -10,6 +10,7 @@ class UserService {
         try {
             return await this.getById(userId);
         } catch (error) {
+            databases.log("=> [4] Phát hiện lỗi 404! Đang chuẩn bị tạo ví mới đây...");
             if (error.code === 404 || error.message.includes("not found")) {
                 return await databases.createDocument(
                     DB_ID,

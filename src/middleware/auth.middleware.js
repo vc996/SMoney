@@ -20,9 +20,8 @@ async function authMiddleware(context) {
 
         context.payload.userId = authUser.$id;
         context.payload.authUser = authUser;
-
+        context.log("=> [1] Middleware check JWT ngon lành rồi!");
         return null;
-
     } catch (err) {
         if (typeof error === 'function') error(`[Middleware Auth Error]: ${err.message}`);
         return res.json({ success: false, message: "Phiên đăng nhập không hợp lệ." }, 401);
