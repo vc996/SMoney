@@ -27,7 +27,10 @@ async function authHandler(context) {
         }, 200);
 
     } catch (err) {
-        if (typeof error === 'function') error(`[Auth Handler Error]: ${err.message}`);
+        if (context.error) {
+            context.error(`[Auth Handler Error]: ${err.message}`);
+        }
+
         return res.json({
             success: false,
             message: "Có lỗi xảy ra khi đồng bộ dữ liệu ví tài chính."
