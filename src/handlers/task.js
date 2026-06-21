@@ -16,13 +16,11 @@ async function createTaskHandler(context) {
         const commission = Number(payload.commission);
         const totalQuantity = Number(payload.totalQuantity);
 
-        // Tạo object data map chuẩn với database của bạn
         const taskData = {
             sku: payload.sku.trim().toUpperCase(),
             title: payload.title || "Chưa có tiêu đề",
             category: payload.category || "General",
 
-            // TRƯỜNG LỖI: Hãy chắc chắn cột trên Appwrite viết giống hệt chữ này
             description: payload.description || "",
 
             importPrice: isNaN(importPrice) ? 0 : importPrice,
@@ -38,7 +36,6 @@ async function createTaskHandler(context) {
             taskData.image = payload.image;
         }
 
-        // Thực hiện ghi vào DB
         const task = await taskSvc.create(taskData);
 
         return res.json({
@@ -57,7 +54,6 @@ async function createTaskHandler(context) {
             }, 409);
         }
 
-        // Trả ra lỗi chi tiết để frontend dễ nhìn
         return res.json({
             success: false,
             message: err.message || "Database error",

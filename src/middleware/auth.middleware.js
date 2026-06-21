@@ -16,14 +16,12 @@ async function authMiddleware(context) {
     const account = new Account(client);
 
     try {
-        // Gọi Auth để check xem JWT sống hay chết
         const authUser = await account.get();
 
-        // Pass dữ liệu thô sang payload để các hàm sau thích lấy gì thì lấy
         context.payload.userId = authUser.$id;
         context.payload.authUser = authUser;
 
-        return null; // JWT chuẩn, mở cửa cho đi tiếp
+        return null;
 
     } catch (err) {
         if (typeof error === 'function') error(`[Middleware Auth Error]: ${err.message}`);

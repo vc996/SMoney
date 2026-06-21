@@ -9,11 +9,8 @@ async function getProfileHandler(context) {
     const user = await userSvc.getById(payload.userId);
 
     return res.json({
-
         success: true,
-
         data: user,
-
     });
 
 }
