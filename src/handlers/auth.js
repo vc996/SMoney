@@ -1,46 +1,43 @@
 const { UserService } = require("../service/user.service");
-
 const userService = new UserService();
 
-/**
- * Sau khi auth.middleware xác thực thành công,
- * trả thông tin người dùng cho Frontend.
- */
 async function authHandler(context) {
-
     const { payload, res, error } = context;
+    const { userId, authUser } = payload;
 
     try {
+        // 1. Chỉ truyền userId xuống để kiểm tra/tạo dòng dữ liệu rỗng (balance = 0, ...)
+        const dbUser = await userService.ensureProfileExists(userId);
 
-        const user = await userService.getById(payload.userId);
-
+        // 2. 🎯 TIẾN HÀNH GỘP: Trả về số dư bằng 0 cùng thời gian trích xuất từ AuthUser
         return res.json({
             success: true,
-
             user: {
-                id: payload.userId,
-                role: user.role,
-                status: user.status,
-                balance: user.balance,
-                totalCommission: user.totalCommission,
-                totalOrder: user.totalOrder,
-            }
+                // Thông tin định danh & phân quyền từ Auth
+                id: userId,
+                name: authUser.name,
+                email: authUser.email,
+                labels: authUser.labels || [],
+                status: authUser.status,
 
+                // 🌟 ĐỒNG BỘ THỜI GIAN: Bốc thẳng thời gian tạo tài khoản gốc từ Auth cấp sang
+                createdAt: authUser.$createdAt,
+                updatedAt: authUser.$updatedAt,
+
+                // Thông tin tài chính lấy từ bảng Database Users
+                balance: dbUser.balance || 0,
+                totalCommission: dbUser.totalCommission || 0,
+                totalOrders: dbUser.totalOrders || 0
+            }
         }, 200);
 
     } catch (err) {
-
-        error(err.message);
-
+        if (typeof error === 'function') error(`[Auth Handler Error]: ${err.message}`);
         return res.json({
             success: false,
-            message: "Không tìm thấy thông tin người dùng."
-        }, 404);
-
+            message: "Có lỗi xảy ra khi đồng bộ dữ liệu ví tài chính."
+        }, 500);
     }
-
 }
 
-module.exports = {
-    authHandler,
-};
+module.exports = { authHandler };
