@@ -6,7 +6,6 @@ async function authHandler(context) {
     const { userId, authUser } = payload;
 
     try {
-        context.log("=> [2] Handler getProfile đang xử lý...");
         const dbUser = await userService.ensureProfileExists(userId);
 
         return res.json({
