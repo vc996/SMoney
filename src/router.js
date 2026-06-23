@@ -26,12 +26,14 @@ async function router(context) {
     }
 
     if (ADMIN_ACTIONS.has(action)) {
-        const dbUser = context.payload.dbUser;
+        // ✅ Đọc trực tiếp từ context.dbUser đã được gán ở middleware bên trên
+        const dbUser = context.dbUser;
 
         if (process.env.NODE_ENV !== 'production') {
             log(`[Router Check Quyền Admin] Dữ liệu User nhận được: ${JSON.stringify(dbUser)}`);
         }
 
+        // authUser trả về từ account.get() có sẵn mảng labels
         const labels = dbUser?.labels ?? [];
 
         if (!labels.includes("admin")) {
