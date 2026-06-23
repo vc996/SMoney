@@ -10,10 +10,7 @@ class UserService {
         try {
             return await this.getById(userId);
         } catch (error) {
-            console.log("👉 ĐÃ QUÉT ĐƯỢC LỖI THỰC TẾ:", error);
-            console.log("👉 error.code thực tế là:", error.code);
-            console.log("👉 error.message thực tế là:", error.message);
-            if (error.code === 404 || error.message.includes("not found")) {
+            if (error.code === 404) {
                 return await databases.createDocument(
                     DB_ID,
                     COLLECTION_USERS,
