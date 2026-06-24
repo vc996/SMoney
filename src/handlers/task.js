@@ -71,8 +71,6 @@ async function getTasksHandler(context) {
     const { res, log } = context;
 
     try {
-        // Gọi hàm list (lấy danh sách) từ TaskService của bạn
-        // Mặc định Appwrite trả về tối đa 25 bản ghi, bạn có thể truyền Query nếu muốn lấy nhiều hơn hoặc sắp xếp
         const taskList = await taskSvc.list();
 
         if (process.env.NODE_ENV !== 'production') {

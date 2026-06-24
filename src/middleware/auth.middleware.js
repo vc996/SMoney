@@ -16,15 +16,12 @@ async function authMiddleware(context) {
     const account = new Account(client);
 
     try {
-        // Lấy thông tin tài khoản từ Appwrite Auth thông qua JWT
         const authUser = await account.get();
 
-        // 🎯 FIX Ở ĐÂY: Gắn thẳng dbUser và userId vào `context` để router.js lấy ra dùng chung dễ dàng
         context.dbUser = authUser;
         context.userId = authUser.$id;
 
-        context.log("=> [1] Middleware check JWT ngon lành rồi!");
-        return null; // Xác thực thành công, cho đi tiếp
+        return null;
     } catch (err) {
         if (typeof error === 'function') error(`[Middleware Auth Error]: ${err.message}`);
         return res.json({ success: false, message: "Phiên đăng nhập không hợp lệ." }, 401);
