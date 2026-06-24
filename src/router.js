@@ -3,6 +3,7 @@ const { authMiddleware } = require("./middleware/auth.middleware");
 const AUTH_ACTIONS = new Set([
     "get_profile",
     "create_task",
+    "get_tasks",
 ]);
 
 const ADMIN_ACTIONS = new Set([
@@ -51,6 +52,8 @@ async function router(context) {
         case "create_task":
             return require("./handlers/task").createTaskHandler(context);
 
+        case "get_tasks":
+            return require("./handlers/task").getTasksHandler(context);
         default:
             return res.json({ success: false, message: "Action không tồn tại" }, 404);
     }
