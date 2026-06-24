@@ -11,7 +11,6 @@ async function createTaskHandler(context) {
         }, 400);
     }
 
-    // 2. Lấy ID người tạo chuẩn từ Middleware JWT đã đính kèm vào context ở bước trước
     const currentUserId = context.userId || "system";
 
     try {
@@ -79,7 +78,7 @@ async function getTasksHandler(context) {
 
         return res.json({
             success: true,
-            tasks: taskList.documents, // Trả về mảng danh sách các Document Task
+            tasks: taskList.documents,
             total: taskList.total
         }, 200);
 

@@ -4,6 +4,7 @@ const AUTH_ACTIONS = new Set([
     "get_profile",
     "create_task",
     "get_tasks",
+    "receive_order",
 ]);
 
 const ADMIN_ACTIONS = new Set([
